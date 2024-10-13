@@ -1,3 +1,7 @@
+import postgres from "postgres";
+
+const sql = postgres({});
+
 const todos = [];
 
 const handleGetTodos = async (req) => {
@@ -34,7 +38,13 @@ const handleRequest = async (req) => {
     );
 
     if (!mapping) {
-        return new Response("Not found", { status: 404 });
+        const urls = urlMapping.map(url => {
+            return `${url.method} ${url.pattern.pathname}`
+        });
+        return new Response(
+            `Not found; available endpoints are: ${urls}`,
+            { status: 404 }
+        );
     }
 
     const mappingResult = mapping.pattern.exec(req.url);
