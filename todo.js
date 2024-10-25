@@ -1,17 +1,29 @@
 import postgres from "postgres";
 
-const sql = postgres({});
-
-const todos = [];
+const sql = postgres('postgres://lorenzo:password@localhost:5432/postgres', {});
 
 const handleGetTodos = async (req) => {
+    const todos = await sql`SELECT id, item from todos`;
     return Response.json(todos);
 }
 
+const handleGetTodo = async (req, urlPatternResult) => {
+    const id = urlPatternResult.pathname.groups.id;
+    const todo = await sql`SELECT id, item from todos where id = ${id}`;
+    if (!todo || todo.length == 0) {
+        return new Response("Not found", { status: 404 });
+    }
+    return Response.json(todo);
+}
+
+// ex: curl -X POST -d '{"item": "practice"}' "localhost:7777/todos"
 const handlePostTodo = async (req) => {
     try {
         const todo = await req.json();
-        todos.push(todo);
+        if (!todo || todo.length == 0 || !todo.item) {
+            return new Response("Error", { status: 400 });
+        }
+        await sql`INSERT INTO todos (item) VALUES (${todo.item})`;
         return new Response("OK", { status: 200 });
     }
     catch (err) {
@@ -24,6 +36,11 @@ const urlMapping = [
         method: "GET",
         pattern: new URLPattern({ pathname: "/todos" }),
         fn: handleGetTodos
+    },
+    {
+        method: "GET",
+        pattern: new URLPattern({ pathname: "/todos/:id" }),
+        fn: handleGetTodo
     },
     {
         method: "POST",
